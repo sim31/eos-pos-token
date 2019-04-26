@@ -65,6 +65,19 @@ private:
       uint64_t primary_key()const { return balance.symbol.code().raw(); }
    };
 
+   struct [[eosio::table]] transfer_in {
+      uint64_t    id;
+      asset       quantity;
+      timestamp_t time;
+
+      uint64_t primary_key() const {
+         return id;
+      }
+
+      uint64_t symbol_key() const {
+         return quantity.symbol.code().raw();
+      }
+   };
 
    struct [[eosio::table]] currency_stats {
       asset                   supply;
@@ -75,11 +88,14 @@ private:
       std::vector<interest_t> anual_interests;
       timestamp_t             stake_start_time; // epoch time in seconds
 
-      uint64_t primary_key()const { return supply.symbol.code().raw(); }
+      uint64_t primary_key() const { return supply.symbol.code().raw(); }
    };
 
    typedef eosio::multi_index< "accounts"_n, account > accounts;
    typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+   typedef eosio::multi_index< "transferins"_n, transfer_in, 
+                               indexed_by<"symbol"_n, const_mem_fun<transfer_in, uint64_t, &transfer_in::symbol_key>>
+                             > transfer_ins; 
 
    void sub_balance( name owner, asset value );
    void add_balance( name owner, asset value, name ram_payer );

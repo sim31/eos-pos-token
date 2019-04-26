@@ -1,7 +1,7 @@
 #include <postoken.hpp>
 
 void postoken::create( name   issuer,
-                    asset  maximum_supply )
+                       asset  maximum_supply )
 {
     require_auth( _self );
 
@@ -79,9 +79,9 @@ void postoken::retire( asset quantity, string memo )
 }
 
 void postoken::transfer( name    from,
-                      name    to,
-                      asset   quantity,
-                      string  memo )
+                         name    to,
+                         asset   quantity,
+                         string  memo )
 {
     check( from != to, "cannot transfer to self" );
     require_auth( from );
