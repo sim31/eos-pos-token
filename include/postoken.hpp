@@ -8,6 +8,9 @@ class [[eosio::contract("postoken")]] postoken : public contract {
 public:
    using contract::contract;
 
+   typedef uint64_t interest_t;
+   typedef uint32_t timestamp_t;
+
    [[eosio::action]]
    void create( name   issuer,
                 asset  maximum_supply);
@@ -29,6 +32,11 @@ public:
 
    [[eosio::action]]
    void close( name owner, const symbol& symbol );
+
+   [[eosio::action]]
+   void setstakespec(const symbol_code& sym_code, const timestamp_t stake_start_time, 
+                     const uint32_t min_coin_age, const uint32_t max_coin_age, 
+                     const std::vector<interest_t>& anual_interests);
 
    static asset get_supply( name token_contract_account, symbol_code sym_code )
    {
@@ -57,13 +65,15 @@ private:
       uint64_t primary_key()const { return balance.symbol.code().raw(); }
    };
 
+
    struct [[eosio::table]] currency_stats {
-      asset                 supply;
-      asset                 max_supply;
-      name                  issuer;
-      uint32_t              min_coin_age; // days
-      uint32_t              max_coin_age; // days
-      std::vector<uint64_t> anual_interests;
+      asset                   supply;
+      asset                   max_supply;
+      name                    issuer;
+      uint32_t                min_coin_age; // days
+      uint32_t                max_coin_age; // days
+      std::vector<interest_t> anual_interests;
+      timestamp_t             stake_start_time; // epoch time in seconds
 
       uint64_t primary_key()const { return supply.symbol.code().raw(); }
    };

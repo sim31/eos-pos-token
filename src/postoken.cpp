@@ -18,7 +18,7 @@ void postoken::create( name   issuer,
        s.supply.symbol = maximum_supply.symbol;
        s.max_supply    = maximum_supply;
        s.issuer        = issuer;
-       s.min_coin_age = s.max_coin_age = 0;
+       s.min_coin_age = s.max_coin_age = s.stake_start_time = 0;
     });
 }
 
@@ -157,4 +157,25 @@ void postoken::close( name owner, const symbol& symbol )
    check( it != acnts.end(), "Balance row already deleted or never existed. Action won't have any effect." );
    check( it->balance.amount == 0, "Cannot close because the balance is not zero." );
    acnts.erase( it );
+}
+
+[[eosio::action]]
+void postoken::setstakespec(const symbol_code& sym_code, const timestamp_t stake_start_time, 
+                            const uint32_t min_coin_age, const uint32_t max_coin_age, 
+                            const std::vector<interest_t>& anual_interests) {
+   stats statstable(_self, sym_code.raw());
+   auto st_it = statstable.require_find(sym_code.raw(), "Token with this symbol does not exist");
+
+   require_auth(st_it->issuer);  
+
+   uint32_t curr_time = now();  
+   check(st_it->stake_start_time < curr_time, "Staking has already started");
+   check(stake_start_time >= curr_time, "stake_start_time cannot be in the past");
+
+   statstable.modify(st_it, _self, [&](currency_stats& st) {
+      st.stake_start_time = stake_start_time;
+      st.min_coin_age     = min_coin_age;
+      st.max_coin_age     = max_coin_age;
+      st.anual_interests  = anual_interests;
+   });
 }

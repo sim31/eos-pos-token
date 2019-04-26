@@ -134,6 +134,7 @@ BOOST_FIXTURE_TEST_CASE( create_tests, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
    produce_blocks(1);
 
@@ -157,6 +158,7 @@ BOOST_FIXTURE_TEST_CASE( symbol_already_exists, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
    produce_blocks(1);
 
@@ -176,6 +178,7 @@ BOOST_FIXTURE_TEST_CASE( create_max_supply, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
    produce_blocks(1);
 
@@ -202,6 +205,7 @@ BOOST_FIXTURE_TEST_CASE( create_max_decimals, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
    produce_blocks(1);
 
@@ -232,6 +236,7 @@ BOOST_FIXTURE_TEST_CASE( issue_tests, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
 
    auto alice_balance = get_account(N(alice), "3,TKN");
@@ -268,6 +273,7 @@ BOOST_FIXTURE_TEST_CASE( retire_tests, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
 
    auto alice_balance = get_account(N(alice), "3,TKN");
@@ -283,6 +289,7 @@ BOOST_FIXTURE_TEST_CASE( retire_tests, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
    alice_balance = get_account(N(alice), "3,TKN");
    REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
@@ -306,6 +313,7 @@ BOOST_FIXTURE_TEST_CASE( retire_tests, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
    alice_balance = get_account(N(alice), "3,TKN");
    REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
@@ -331,6 +339,7 @@ BOOST_FIXTURE_TEST_CASE( transfer_tests, eosio_token_tester ) try {
       ("issuer", "alice")
       ("min_coin_age", 0)("max_coin_age", 0)
       ("anual_interests", std::vector<uint64_t>())
+      ("stake_start_time", 0)
    );
 
    auto alice_balance = get_account(N(alice), "0,CERO");
