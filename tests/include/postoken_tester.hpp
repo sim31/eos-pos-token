@@ -4,7 +4,7 @@
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
 #include <eosio_testing.hpp>
-#include <contract.hpp>
+#include <postoken_contract.hpp>
 
 #include "Runtime/Runtime.h"
 
@@ -17,6 +17,6 @@ public:
 
    postoken_tester();
 
-   contract postoken_contract;
+   postoken_contract postoken_c;
 };
 
