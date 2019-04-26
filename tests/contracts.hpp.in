@@ -1,0 +1,10 @@
+#pragma once
+#include <eosio/testing/tester.hpp>
+
+using namespace eosio;
+using namespace eosio::testing;
+
+struct contracts {
+   static std::vector<uint8_t> postoken_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../postoken/postoken.wasm"); }
+   static std::vector<char>    postoken_abi() { return read_abi("${CMAKE_BINARY_DIR}/../postoken/postoken.abi"); } 
+};

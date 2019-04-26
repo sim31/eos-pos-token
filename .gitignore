@@ -1,0 +1,8 @@
+env/
+*.wast
+*.wasm
+bkp_*
+*.swp
+.vimrc
+build/
+.vscode
