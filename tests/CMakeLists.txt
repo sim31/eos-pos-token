@@ -5,7 +5,7 @@ project(devizio_unit_tests)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(EOSIO_VERSION_MIN "1.4")
-set(EOSIO_VERSION_SOFT_MAX "1.6")
+set(EOSIO_VERSION_SOFT_MAX "1.7")
 #set(EOSIO_VERSION_HARD_MAX "")
 
 find_package(eosio)

@@ -1,7 +1,5 @@
 #include <postoken_tester.hpp>
 #include <iostream>
-#include <chrono>
-#include <thread>
 
 BOOST_AUTO_TEST_SUITE(postoken_tests)
 
@@ -101,6 +99,64 @@ BOOST_FIXTURE_TEST_CASE(transfer_ins_tests, postoken_tester) try {
    BOOST_CHECK_EQUAL(postoken_c.get_entry_count(N(accb), N(transferins)), 2);
 
 } FC_LOG_AND_RETHROW()
+
+typedef asset interest_t;
+
+BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
+   auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(10);
+   uint32_t min_coin_age = 1;
+   uint32_t max_coin_age = 30;
+   std::vector<interest_t> interests{ asset_str("0.1000 TOK")};   
+   account_name issuer = postoken_c.get_contract_name();
+
+   REQUIRE_SUCCESS(postoken_c.push_action(issuer, N(setstakespec), 
+                   mvo()("stake_start_time", stake_start_time)
+                        ("min_coin_age", min_coin_age)
+                        ("max_coin_age", max_coin_age)
+                        ("anual_interests", interests)) );
+
+   // Check if tokens issued before stake_start_time start earning from stake_start_time
+   produce_block(fc::microseconds(to_epoch_time(20) * (uint64_t)1000000)); // 20 days passed
+   symbol s(4, "TOK");
+   symbol_code sym_code = s.to_symbol_code();
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.0274 TOK")) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_transfer_in(N(acca), 0),
+                         mvo()("id", 0)("time", LAST_BLOCK_EPOCH_TIME())
+                              ("quantity", asset_str("10.0274 TOK")) );
+   BOOST_CHECK_EQUAL(postoken_c.get_entry_count(N(acca), N(transferins)), 2);
+
+   // Check earnings after simple transfer and from multiple transferins
+   produce_block(fc::microseconds(to_epoch_time(5) * (uint64_t)1000000)); // 5 days
+   REQUIRE_SUCCESS(postoken_c.push_action(N(accb), N(transfer),
+                   mvo()("from", "accb")("to", "acca")("quantity", "5.0000 TOK")
+                        ("memo", "")) );
+   produce_block(fc::microseconds(to_epoch_time(30) * (uint64_t)1000000));
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.1646 TOK")) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_transfer_in(N(acca), 0),
+                         mvo()("id", 0)("time", LAST_BLOCK_EPOCH_TIME())
+                              ("quantity", asset_str("10.1646 TOK")) );
+   BOOST_CHECK_EQUAL(postoken_c.get_entry_count(N(acca), N(transferins)), 2);
+
+   CHECK_SUCCESS(postoken_c.push_action(N(accb), N(claim),
+                 mvo()("account", "accb")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(accb), "4,TOK"),
+                         mvo()("balance", asset_str("5.0410 TOK")) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_transfer_in(N(accb), 0),
+                         mvo()("id", 0)("time", LAST_BLOCK_EPOCH_TIME())
+                              ("quantity", asset_str("5.0410 TOK")) );
+   BOOST_CHECK_EQUAL(postoken_c.get_entry_count(N(accb), N(transferins)), 2);
+
+   
+} FC_LOG_AND_RETHROW()
+
+// TODO: Test differing anual interest rates
+//       Test min and max age parameters
 
 BOOST_AUTO_TEST_SUITE_END() // postoken_tests
 

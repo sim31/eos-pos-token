@@ -104,6 +104,10 @@ void postoken::transfer( name    from,
     add_balance( to, quantity, payer );
 }
 
+void postoken::claim(const name& account, const symbol_code& sym_code) {
+
+}
+
 void postoken::sub_balance( name owner, asset value, name ram_payer ) {
    accounts from_acnts( _self, owner.value );
 
@@ -187,14 +191,22 @@ void postoken::close( name owner, const symbol& symbol )
    acnts.erase( it );
 }
 
-[[eosio::action]]
-void postoken::setstakespec(const symbol_code& sym_code, const timestamp_t stake_start_time, 
+void postoken::setstakespec(const timestamp_t stake_start_time, 
                             const uint32_t min_coin_age, const uint32_t max_coin_age, 
                             const std::vector<interest_t>& anual_interests) {
+
+   check(anual_interests.size() > 0, "You have to specify interest rates");
+
+   symbol sym = anual_interests[0].symbol;
+   symbol_code sym_code = sym.code();
    stats statstable(_self, sym_code.raw());
    auto st_it = statstable.require_find(sym_code.raw(), "Token with this symbol does not exist");
 
    require_auth(st_it->issuer);  
+
+   check(st_it->max_supply.symbol == sym, "Invalid token precision");
+   for( const interest_t& i : anual_interests )
+      check(i.symbol == sym, "All anual interest rates have to have the same symbol");
 
    uint32_t curr_time = now();  
    check(st_it->stake_start_time < curr_time, "Staking has already started");

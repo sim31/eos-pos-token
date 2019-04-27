@@ -8,7 +8,7 @@ class [[eosio::contract("postoken")]] postoken : public contract {
 public:
    using contract::contract;
 
-   typedef uint64_t interest_t;
+   typedef asset    interest_t;
    typedef uint32_t timestamp_t;
 
    [[eosio::action]]
@@ -34,9 +34,12 @@ public:
    void close( name owner, const symbol& symbol );
 
    [[eosio::action]]
-   void setstakespec(const symbol_code& sym_code, const timestamp_t stake_start_time, 
+   void setstakespec(const timestamp_t stake_start_time, 
                      const uint32_t min_coin_age, const uint32_t max_coin_age, 
                      const std::vector<interest_t>& anual_interests);
+
+   [[eosio::action]]
+   void claim(const name& account, const symbol_code& sym_code);
 
    static asset get_supply( name token_contract_account, symbol_code sym_code )
    {
@@ -58,6 +61,7 @@ public:
    using transfer_action = eosio::action_wrapper<"transfer"_n, &postoken::transfer>;
    using open_action = eosio::action_wrapper<"open"_n, &postoken::open>;
    using close_action = eosio::action_wrapper<"close"_n, &postoken::close>;
+   using claim_action = eosio::action_wrapper<"claim"_n, &postoken::claim>;
 private:
    struct [[eosio::table]] account {
       asset    balance;

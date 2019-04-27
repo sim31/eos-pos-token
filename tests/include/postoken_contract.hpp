@@ -5,6 +5,11 @@
 
 using namespace eosio_testing;
 
+typedef uint32_t period_t;
+static inline uint32_t to_epoch_time(period_t days) {
+   return days * 24 * 60 * 60;
+}
+
 class postoken_contract : public eosio_testing::contract {
 public:
 

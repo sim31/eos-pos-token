@@ -20,3 +20,8 @@ public:
    postoken_contract postoken_c;
 };
 
+class postoken_issued_tester : public postoken_tester {
+public:
+   postoken_issued_tester();
+};
+

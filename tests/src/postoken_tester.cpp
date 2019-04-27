@@ -19,21 +19,24 @@ postoken_tester::postoken_tester() : postoken_c(*this) {
                         ("maximum_supply", asset_str("1000000.0000 TOK"))
    ));
 
-   // REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
-   //                 mvo()("to", "acca")("quantity", asset_str("10.0000 TOK"))
-   //                      ("memo", "issue")
-   // ));
-   // REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
-   //                 mvo()("to", "accb")("quantity", asset_str("10.0000 TOK"))
-   //                      ("memo", "issue")
-   // ));
-   // REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
-   //                 mvo()("to", "accc")("quantity", asset_str("10.0000 TOK"))
-   //                      ("memo", "issue")
-   // ));
-   // REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
-   //                 mvo()("to", "accd")("quantity", asset_str("10.0000 TOK"))
-   //                      ("memo", "issue")
-   // ));
+}
+
+postoken_issued_tester::postoken_issued_tester() : postoken_tester() {
+   REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
+                   mvo()("to", "acca")("quantity", asset_str("10.0000 TOK"))
+                        ("memo", "issue")
+   ));
+   REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
+                   mvo()("to", "accb")("quantity", asset_str("10.0000 TOK"))
+                        ("memo", "issue")
+   ));
+   REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
+                   mvo()("to", "accc")("quantity", asset_str("10.0000 TOK"))
+                        ("memo", "issue")
+   ));
+   REQUIRE_SUCCESS(postoken_c.push_action(postoken_c.get_contract_name(), N(issue),
+                   mvo()("to", "accd")("quantity", asset_str("10.0000 TOK"))
+                        ("memo", "issue")
+   ));
 }
 
