@@ -24,10 +24,10 @@ public:
    {
       auto symb = eosio::chain::symbol::from_string(symbolname);
       auto symbol_code = symb.to_symbol_code().value;
-      return get_entry(acc, N(account), "account", symbol_code);
+      return get_entry(acc, N(accounts), "account", symbol_code);
    }
 
-   fc::variant get_transfer_ins(account_name acc, const uint64_t id) {
+   fc::variant get_transfer_in(account_name acc, const uint64_t id) {
       return get_entry(acc, N(transferins), "transfer_in", id);
    }
 
