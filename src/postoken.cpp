@@ -75,7 +75,7 @@ void postoken::retire( asset quantity, string memo )
        s.supply -= quantity;
     });
 
-    sub_balance( st.issuer, quantity );
+    sub_balance( st.issuer, quantity, st.issuer );
 }
 
 void postoken::transfer( name    from,
@@ -100,19 +100,40 @@ void postoken::transfer( name    from,
 
     auto payer = has_auth( to ) ? to : from;
 
-    sub_balance( from, quantity );
+    sub_balance( from, quantity, from );
     add_balance( to, quantity, payer );
 }
 
-void postoken::sub_balance( name owner, asset value ) {
+void postoken::sub_balance( name owner, asset value, name ram_payer ) {
    accounts from_acnts( _self, owner.value );
 
-   const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
+   auto sym_code = value.symbol.code();
+   const auto& from = from_acnts.get( sym_code.raw(), "no balance object found" );
    check( from.balance.amount >= value.amount, "overdrawn balance" );
 
    from_acnts.modify( from, owner, [&]( auto& a ) {
          a.balance -= value;
       });
+   
+   // Replace all transfer ins with a new one
+   // Could take up time in case of a lot of transfer ins, but this could be solved easily by claiming first
+   // Transaction exceeding tie limit can be a kind of a warning to the user that there might be a lot of stuff to claim
+   transfer_ins transfers(_self, owner.value);
+   auto index = transfers.get_index<"symbol"_n>();
+   // Returns lower bound - first matching
+   auto itr = index.require_find(sym_code.raw(), "No transfer ins found, even though balance exists!");
+   do {
+      check(itr->quantity.symbol == value.symbol, "Invalid precision in transferin!");
+      itr = index.erase(itr);
+   } while( itr != index.end() && itr->quantity.symbol.code() == sym_code );
+
+   if( from.balance.amount > 0 ) {
+      transfers.emplace(ram_payer, [&](transfer_in& tr) {
+         tr.id       = transfers.available_primary_key();
+         tr.quantity = from.balance;
+         tr.time     = now();
+      });
+   }
 }
 
 void postoken::add_balance( name owner, asset value, name ram_payer )
@@ -128,6 +149,13 @@ void postoken::add_balance( name owner, asset value, name ram_payer )
         a.balance += value;
       });
    }
+
+   transfer_ins transfers(_self, owner.value);
+   transfers.emplace(ram_payer, [&](transfer_in& tr) {
+      tr.id       = transfers.available_primary_key();
+      tr.quantity = value;
+      tr.time     = now();
+   });
 }
 
 void postoken::open( name owner, const symbol& symbol, name ram_payer )

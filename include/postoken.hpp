@@ -97,6 +97,6 @@ private:
                                indexed_by<"symbol"_n, const_mem_fun<transfer_in, uint64_t, &transfer_in::symbol_key>>
                              > transfer_ins; 
 
-   void sub_balance( name owner, asset value );
+   void sub_balance( name owner, asset value, name ram_payer ); // ram_payer - for transferins
    void add_balance( name owner, asset value, name ram_payer );
 };
