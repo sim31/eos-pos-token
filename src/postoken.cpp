@@ -105,14 +105,14 @@ void postoken::transfer( name    from,
     add_balance( to, quantity, payer );
 }
 
-void postoken::claim(const name& account, const symbol_code& sym_code) {
+void postoken::mint(const name& account, const symbol_code& sym_code) {
    require_auth(account);
    stats statstable( _self, sym_code.raw() );
    const auto& st = statstable.get( sym_code.raw() );
    auto curr_time = now();
    symbol sym     = st.max_supply.symbol;
 
-   check(st.stake_start_time < curr_time, "Can't claim before stake start time");
+   check(st.stake_start_time < curr_time, "Can't mint before stake start time");
 
    // Determine interest rate
    asset interest_rate = get_interest_rate(st, curr_time);

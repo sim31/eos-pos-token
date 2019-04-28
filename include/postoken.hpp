@@ -46,7 +46,7 @@ public:
                      const std::vector<interest_t>& anual_interests);
 
    [[eosio::action]]
-   void claim(const name& account, const symbol_code& sym_code);
+   void mint(const name& account, const symbol_code& sym_code);
 
    static asset get_supply( name token_contract_account, symbol_code sym_code )
    {
@@ -68,7 +68,7 @@ public:
    using transfer_action = eosio::action_wrapper<"transfer"_n, &postoken::transfer>;
    using open_action = eosio::action_wrapper<"open"_n, &postoken::open>;
    using close_action = eosio::action_wrapper<"close"_n, &postoken::close>;
-   using claim_action = eosio::action_wrapper<"claim"_n, &postoken::claim>;
+   using mint_action = eosio::action_wrapper<"mint"_n, &postoken::mint>;
 private:
    struct [[eosio::table]] account {
       asset    balance;

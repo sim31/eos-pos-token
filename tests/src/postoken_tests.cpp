@@ -102,7 +102,7 @@ BOOST_FIXTURE_TEST_CASE(transfer_ins_tests, postoken_tester) try {
 
 typedef asset interest_t;
 
-BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
+BOOST_FIXTURE_TEST_CASE(mint_tests, postoken_issued_tester) try {
    auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(10);
    uint32_t min_coin_age = 1;
    uint32_t max_coin_age = 60;
@@ -120,15 +120,15 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
                         ("max_coin_age", max_coin_age)
                         ("anual_interests", interests)) );
 
-   // Check if you can't claim before stake_start_time
-   action_result res = postoken_c.push_action(N(acca), N(claim),
+   // Check if you can't mint before stake_start_time
+   action_result res = postoken_c.push_action(N(acca), N(mint),
                                               mvo()("account", "acca")
                                                    ("sym_code", sym_code) );
-   CHECK_ASSERT_MSG(res, "Can't claim before stake start time");
+   CHECK_ASSERT_MSG(res, "Can't mint before stake start time");
 
    // Check if tokens issued before stake_start_time start earning from stake_start_time
    produce_block(fc::microseconds(to_epoch_time(20) * (uint64_t)1000000)); // 20 days passed
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("10.0273 TOK")) );
@@ -143,7 +143,7 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
                    mvo()("from", "accb")("to", "acca")("quantity", "5.0000 TOK")
                         ("memo", "")) );
    produce_block(fc::microseconds(to_epoch_time(30) * (uint64_t)1000000));
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("15.1645 TOK")) );
@@ -152,7 +152,7 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
                               ("quantity", asset_str("15.1645 TOK")) );
    BOOST_CHECK_EQUAL(postoken_c.get_entry_count(N(acca), N(transferins)), 2);
 
-   CHECK_SUCCESS(postoken_c.push_action(N(accb), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(accb), N(mint),
                  mvo()("account", "accb")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(accb), "4,TOK"),
                          mvo()("balance", asset_str("5.0410 TOK")) );
@@ -184,7 +184,7 @@ BOOST_FIXTURE_TEST_CASE(variable_interest_rates, postoken_issued_tester) try {
                         ("anual_interests", interests)) );
 
    produce_block(fc::microseconds(to_epoch_time(21) * (uint64_t)1000000)); // 20 days passed since stake_start_time
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("10.5479 TOK")) );
@@ -195,7 +195,7 @@ BOOST_FIXTURE_TEST_CASE(variable_interest_rates, postoken_issued_tester) try {
    // Second year
    produce_block(fc::microseconds(to_epoch_time(365) * (uint64_t)1000000)); // a year
    // max_coin_age is reached here
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("10.6345 TOK")) );
@@ -205,20 +205,20 @@ BOOST_FIXTURE_TEST_CASE(variable_interest_rates, postoken_issued_tester) try {
 
    // Reach the end of the third year
    produce_block(fc::microseconds(to_epoch_time(708) * (uint64_t)1000000));
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("10.7219 TOK")) );
 
    // The final interest rate
    produce_block(fc::microseconds(to_epoch_time(29) * (uint64_t)1000000));
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("10.7304 TOK")) );
 
    produce_block(fc::microseconds(to_epoch_time(730) * (uint64_t)1000000));
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("10.7392 TOK")) );
@@ -248,7 +248,7 @@ BOOST_FIXTURE_TEST_CASE(interest_rate_0, postoken_issued_tester) try {
    // On a 4th year interest earnings should be 0
    produce_block(fc::microseconds(to_epoch_time(1125) * (uint64_t)1000000)); // 30 days in a third year
 
-   action_result res = postoken_c.push_action(N(acca), N(claim),
+   action_result res = postoken_c.push_action(N(acca), N(mint),
                                   mvo()("account", "acca")("sym_code", sym_code) );
    CHECK_ASSERT_MSG(res, "Nothing to claim: 0 interest rate");
             
@@ -276,7 +276,7 @@ BOOST_FIXTURE_TEST_CASE(last_interest_rate_unspecified, postoken_issued_tester) 
    // On a third year interest earnings should be 0
    produce_block(fc::microseconds(to_epoch_time(1125) * (uint64_t)1000000)); // 30 days in a third year
 
-   action_result res = postoken_c.push_action(N(acca), N(claim),
+   action_result res = postoken_c.push_action(N(acca), N(mint),
                                   mvo()("account", "acca")("sym_code", sym_code) );
    CHECK_ASSERT_MSG(res, "Nothing to claim: 0 interest rate");
             
@@ -302,13 +302,13 @@ BOOST_FIXTURE_TEST_CASE(coin_age_parameters, postoken_issued_tester) try {
 
    // Try claiming before min_coin_age was reached
    produce_block(fc::microseconds(to_epoch_time(2) * (uint64_t)1000000)); 
-   action_result res = postoken_c.push_action(N(acca), N(claim),
+   action_result res = postoken_c.push_action(N(acca), N(mint),
                                   mvo()("account", "acca")("sym_code", sym_code) );
    CHECK_ASSERT_MSG(res, "Nothing to claim");
 
    // min_coin_age reached
    produce_block(fc::microseconds((to_epoch_time(1) + 1) * (uint64_t)1000000));
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("10.0410 TOK")) );
@@ -322,7 +322,7 @@ BOOST_FIXTURE_TEST_CASE(coin_age_parameters, postoken_issued_tester) try {
                    mvo()("from", "accb")("to", "acca")("quantity", asset_str("9.0000 TOK"))
                         ("memo", "")) );
    produce_block(fc::microseconds(to_epoch_time(1) * (uint64_t)1000000));
-   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(mint),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
                          mvo()("balance", asset_str("19.3986 TOK")) );
