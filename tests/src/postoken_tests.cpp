@@ -107,9 +107,12 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
    uint32_t min_coin_age = 1;
    uint32_t max_coin_age = 30;
    std::vector<mutable_variant_object> interests{ 
+      // years = 0 means forever
       mvo()("years", 0)("interest_rate", asset_str("0.1000 TOK")) 
    };   
    account_name issuer = postoken_c.get_contract_name();
+   symbol s(4, "TOK");
+   symbol_code sym_code = s.to_symbol_code();
 
    REQUIRE_SUCCESS(postoken_c.push_action(issuer, N(setstakespec), 
                    mvo()("stake_start_time", stake_start_time)
@@ -117,8 +120,6 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
                         ("max_coin_age", max_coin_age)
                         ("anual_interests", interests)) );
 
-   symbol s(4, "TOK");
-   symbol_code sym_code = s.to_symbol_code();
    // Check if you can't claim before stake_start_time
    action_result res = postoken_c.push_action(N(acca), N(claim),
                                               mvo()("account", "acca")
@@ -164,6 +165,126 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
 
 // TODO: Test differing anual interest rates
 //       Test min and max age parameters
+
+BOOST_FIXTURE_TEST_CASE(variable_interest_rates, postoken_issued_tester) try {
+   auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(1);
+   uint32_t min_coin_age = 1;
+   uint32_t max_coin_age = 30;
+   std::vector<mutable_variant_object> interests{ 
+      // years = 0 means forever (or until max_supply is reached)
+      mvo()("years", 1)("interest_rate", asset_str("1.0000 TOK")),
+      mvo()("years", 2)("interest_rate", asset_str("0.1000 TOK")),
+      mvo()("years", 0)("interest_rate", asset_str("0.0100 TOK"))
+   };   
+   account_name issuer = postoken_c.get_contract_name();
+   symbol s(4, "TOK");
+   symbol_code sym_code = s.to_symbol_code();
+
+   REQUIRE_SUCCESS(postoken_c.push_action(issuer, N(setstakespec), 
+                   mvo()("stake_start_time", stake_start_time)
+                        ("min_coin_age", min_coin_age)
+                        ("max_coin_age", max_coin_age)
+                        ("anual_interests", interests)) );
+
+   produce_block(fc::microseconds(to_epoch_time(21) * (uint64_t)1000000)); // 20 days passed
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.5479 TOK")) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_transfer_in(N(acca), 0),
+                         mvo()("id", 0)("time", LAST_BLOCK_EPOCH_TIME())
+                              ("quantity", asset_str("10.5479 TOK")) );
+
+   // Second year
+   produce_block(fc::microseconds(to_epoch_time(365) * (uint64_t)1000000)); // a year
+   // max_coin_age is reached here
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.6345 TOK")) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_transfer_in(N(acca), 0),
+                         mvo()("id", 0)("time", LAST_BLOCK_EPOCH_TIME())
+                              ("quantity", asset_str("10.6345 TOK")) );
+
+   // Reach the end of the second year
+   produce_block(fc::microseconds(to_epoch_time(344) * (uint64_t)1000000));
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.7219 TOK")) );
+
+   // The final interest rate
+   produce_block(fc::microseconds(to_epoch_time(29) * (uint64_t)1000000));
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.7304 TOK")) );
+
+   produce_block(fc::microseconds(to_epoch_time(730) * (uint64_t)1000000));
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.7329 TOK")) );
+            
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(interest_rate_0, postoken_issued_tester) try {
+   auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(1);
+   uint32_t min_coin_age = 1;
+   uint32_t max_coin_age = 30;
+   std::vector<mutable_variant_object> interests{ 
+      // years = 0 means forever (or until max_supply is reached)
+      mvo()("years", 1)("interest_rate", asset_str("1.0000 TOK")),
+      mvo()("years", 2)("interest_rate", asset_str("0.1000 TOK")),
+      mvo()("years", 0)("interest_rate", asset_str("0.0000 TOK"))
+   };   
+   account_name issuer = postoken_c.get_contract_name();
+   symbol s(4, "TOK");
+   symbol_code sym_code = s.to_symbol_code();
+
+   REQUIRE_SUCCESS(postoken_c.push_action(issuer, N(setstakespec), 
+                   mvo()("stake_start_time", stake_start_time)
+                        ("min_coin_age", min_coin_age)
+                        ("max_coin_age", max_coin_age)
+                        ("anual_interests", interests)) );
+
+   // On a third year interest earnings should be 0
+   produce_block(fc::microseconds(to_epoch_time(760) * (uint64_t)1000000)); // 30 days in a third year
+
+   action_result res = postoken_c.push_action(N(acca), N(claim),
+                                  mvo()("account", "acca")("sym_code", sym_code) );
+   CHECK_ASSERT_MSG(res, "Nothing to claim: 0 interest rates");
+            
+} FC_LOG_AND_RETHROW()
+
+
+BOOST_FIXTURE_TEST_CASE(last_interest_rate_unspecified, postoken_issued_tester) try {
+   auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(1);
+   uint32_t min_coin_age = 1;
+   uint32_t max_coin_age = 30;
+   std::vector<mutable_variant_object> interests{ 
+      // years = 0 means forever (or until max_supply is reached)
+      mvo()("years", 1)("interest_rate", asset_str("1.0000 TOK")),
+      mvo()("years", 2)("interest_rate", asset_str("0.1000 TOK")),
+   };   
+   account_name issuer = postoken_c.get_contract_name();
+   symbol s(4, "TOK");
+   symbol_code sym_code = s.to_symbol_code();
+
+   REQUIRE_SUCCESS(postoken_c.push_action(issuer, N(setstakespec), 
+                   mvo()("stake_start_time", stake_start_time)
+                        ("min_coin_age", min_coin_age)
+                        ("max_coin_age", max_coin_age)
+                        ("anual_interests", interests)) );
+
+   // On a third year interest earnings should be 0
+   produce_block(fc::microseconds(to_epoch_time(760) * (uint64_t)1000000)); // 30 days in a third year
+
+   action_result res = postoken_c.push_action(N(acca), N(claim),
+                                  mvo()("account", "acca")("sym_code", sym_code) );
+   CHECK_ASSERT_MSG(res, "Nothing to claim: 0 interest rates");
+            
+} FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END() // postoken_tests
 
