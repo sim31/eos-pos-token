@@ -212,6 +212,9 @@ void postoken::setstakespec(const timestamp_t stake_start_time,
    check(st_it->stake_start_time < curr_time, "Staking has already started");
    check(stake_start_time >= curr_time, "stake_start_time cannot be in the past");
 
+   check(max_coin_age > 0, "Coin age cannot be 0");
+   check(min_coin_age <= max_coin_age, "min_coin_age cannot be greater than max_coin_age");
+
    statstable.modify(st_it, _self, [&](currency_stats& st) {
       st.stake_start_time = stake_start_time;
       st.min_coin_age     = min_coin_age;

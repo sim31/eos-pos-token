@@ -163,9 +163,6 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
 
 } FC_LOG_AND_RETHROW()
 
-// TODO: Test differing anual interest rates
-//       Test min and max age parameters
-
 BOOST_FIXTURE_TEST_CASE(variable_interest_rates, postoken_issued_tester) try {
    auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(1);
    uint32_t min_coin_age = 1;
@@ -257,7 +254,6 @@ BOOST_FIXTURE_TEST_CASE(interest_rate_0, postoken_issued_tester) try {
             
 } FC_LOG_AND_RETHROW()
 
-
 BOOST_FIXTURE_TEST_CASE(last_interest_rate_unspecified, postoken_issued_tester) try {
    auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(1);
    uint32_t min_coin_age = 1;
@@ -283,6 +279,54 @@ BOOST_FIXTURE_TEST_CASE(last_interest_rate_unspecified, postoken_issued_tester) 
    action_result res = postoken_c.push_action(N(acca), N(claim),
                                   mvo()("account", "acca")("sym_code", sym_code) );
    CHECK_ASSERT_MSG(res, "Nothing to claim: 0 interest rates");
+            
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(coin_age_parameters, postoken_issued_tester) try {
+   auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + 1;
+   uint32_t min_coin_age = 3;
+   uint32_t max_coin_age = 60;
+   std::vector<mutable_variant_object> interests{ 
+      // years = 0 means forever (or until max_supply is reached)
+      mvo()("years", 1)("interest_rate", asset_str("0.5000 TOK")),
+   };   
+   account_name issuer = postoken_c.get_contract_name();
+   symbol s(4, "TOK");
+   symbol_code sym_code = s.to_symbol_code();
+
+   REQUIRE_SUCCESS(postoken_c.push_action(issuer, N(setstakespec), 
+                   mvo()("stake_start_time", stake_start_time)
+                        ("min_coin_age", min_coin_age)
+                        ("max_coin_age", max_coin_age)
+                        ("anual_interests", interests)) );
+
+   // Try claiming before min_coin_age was reached
+   produce_block(fc::microseconds(to_epoch_time(2) * (uint64_t)1000000)); 
+   action_result res = postoken_c.push_action(N(acca), N(claim),
+                                  mvo()("account", "acca")("sym_code", sym_code) );
+   CHECK_ASSERT_MSG(res, "Nothing to claim");
+
+   // min_coin_age reached
+   produce_block(fc::microseconds(to_epoch_time(3) * (uint64_t)1000000));
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.0410 TOK")) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_transfer_in(N(acca), 0),
+                         mvo()("id", 0)("time", LAST_BLOCK_EPOCH_TIME())
+                              ("quantity", asset_str("10.0410 TOK")) );
+
+   // min_coin_age reached for only 1 of the transferins
+   produce_block(fc::microseconds(to_epoch_time(25) * (uint64_t)1000000));
+   REQUIRE_SUCCESS(postoken_c.push_action(N(accb), N(transfer), 
+                   mvo()("from", "accb")("to", "acca")("quantity", asset_str("9.0000 TOK"))
+                        ("memo", "")) );
+   produce_block(fc::microseconds(to_epoch_time(1) * (uint64_t)1000000));
+   CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
+                 mvo()("account", "acca")("sym_code", sym_code)) );
+   CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
+                         mvo()("balance", asset_str("10.3576 TOK")) );
+
             
 } FC_LOG_AND_RETHROW()
 
