@@ -8,8 +8,11 @@ class [[eosio::contract("postoken")]] postoken : public contract {
 public:
    using contract::contract;
 
-   typedef asset    interest_t;
    typedef uint32_t timestamp_t;
+   struct interest_t {
+      asset    interest_rate;
+      uint16_t years;
+   };
 
    [[eosio::action]]
    void create( name   issuer,
@@ -35,7 +38,7 @@ public:
 
    [[eosio::action]]
    void setstakespec(const timestamp_t stake_start_time, 
-                     const uint32_t min_coin_age, const uint32_t max_coin_age, 
+                     const uint16_t min_coin_age, const uint16_t max_coin_age, 
                      const std::vector<interest_t>& anual_interests);
 
    [[eosio::action]]
@@ -83,12 +86,13 @@ private:
       }
    };
 
+
    struct [[eosio::table]] currency_stats {
       asset                   supply;
       asset                   max_supply;
       name                    issuer;
-      uint32_t                min_coin_age; // days
-      uint32_t                max_coin_age; // days
+      uint16_t                min_coin_age; // days
+      uint16_t                max_coin_age; // days
       std::vector<interest_t> anual_interests;
       timestamp_t             stake_start_time; // epoch time in seconds
 

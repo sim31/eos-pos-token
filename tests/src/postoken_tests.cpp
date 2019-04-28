@@ -106,7 +106,9 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
    auto stake_start_time = LAST_BLOCK_EPOCH_TIME() + to_epoch_time(10);
    uint32_t min_coin_age = 1;
    uint32_t max_coin_age = 30;
-   std::vector<interest_t> interests{ asset_str("0.1000 TOK")};   
+   std::vector<mutable_variant_object> interests{ 
+      mvo()("years", 0)("interest_rate", asset_str("0.1000 TOK")) 
+   };   
    account_name issuer = postoken_c.get_contract_name();
 
    REQUIRE_SUCCESS(postoken_c.push_action(issuer, N(setstakespec), 
@@ -115,10 +117,16 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
                         ("max_coin_age", max_coin_age)
                         ("anual_interests", interests)) );
 
-   // Check if tokens issued before stake_start_time start earning from stake_start_time
-   produce_block(fc::microseconds(to_epoch_time(20) * (uint64_t)1000000)); // 20 days passed
    symbol s(4, "TOK");
    symbol_code sym_code = s.to_symbol_code();
+   // Check if you can't claim before stake_start_time
+   action_result res = postoken_c.push_action(N(acca), N(claim),
+                                              mvo()("account", "acca")
+                                                   ("sym_code", sym_code) );
+   CHECK_ASSERT_MSG(res, "Can't claim before stake start time");
+
+   // Check if tokens issued before stake_start_time start earning from stake_start_time
+   produce_block(fc::microseconds(to_epoch_time(20) * (uint64_t)1000000)); // 20 days passed
    CHECK_SUCCESS(postoken_c.push_action(N(acca), N(claim),
                  mvo()("account", "acca")("sym_code", sym_code)) );
    CHECK_MATCHING_OBJECT(postoken_c.get_account(N(acca), "4,TOK"),
@@ -152,7 +160,6 @@ BOOST_FIXTURE_TEST_CASE(claim_tests, postoken_issued_tester) try {
                               ("quantity", asset_str("5.0410 TOK")) );
    BOOST_CHECK_EQUAL(postoken_c.get_entry_count(N(accb), N(transferins)), 2);
 
-   
 } FC_LOG_AND_RETHROW()
 
 // TODO: Test differing anual interest rates
