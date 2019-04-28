@@ -4,6 +4,10 @@
 using namespace eosio;
 using std::string;
 
+inline uint32_t epoch_to_days(uint32_t epoch_time) {
+   return epoch_time / 60 / 60 / 24;
+}
+
 class [[eosio::contract("postoken")]] postoken : public contract {
 public:
    using contract::contract;
@@ -86,7 +90,6 @@ private:
       }
    };
 
-
    struct [[eosio::table]] currency_stats {
       asset                   supply;
       asset                   max_supply;
@@ -107,4 +110,18 @@ private:
 
    void sub_balance( name owner, asset value, name ram_payer ); // ram_payer - for transferins
    void add_balance( name owner, asset value, name ram_payer );
+
+   asset get_interest_rate(const currency_stats& stats, uint32_t epoch_time);
+
+   template<typename Index>
+   void erase_transferins(Index& index, const symbol& sym) {
+      symbol_code sym_code = sym.code();
+      // Returns lower bound - first matching
+      auto itr = index.require_find(sym_code.raw(), "No transfer ins found");
+      do {
+         check(itr->quantity.symbol == sym, "Invalid precision in transferin!");
+         itr = index.erase(itr);
+      } while( itr != index.end() && itr->quantity.symbol.code() == sym_code );
+   }
+
 };

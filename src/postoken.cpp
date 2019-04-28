@@ -1,4 +1,5 @@
 #include <postoken.hpp>
+#include <cmath>
 
 void postoken::create( name   issuer,
                        asset  maximum_supply )
@@ -105,7 +106,74 @@ void postoken::transfer( name    from,
 }
 
 void postoken::claim(const name& account, const symbol_code& sym_code) {
+   require_auth(account);
+   stats statstable( _self, sym_code.raw() );
+   const auto& st = statstable.get( sym_code.raw() );
+   auto curr_time = now();
+   symbol sym     = st.max_supply.symbol;
 
+   check(st.stake_start_time < curr_time, "Can't claim before stake start time");
+
+   // Determine interest rate
+   asset interest_rate = get_interest_rate(st, curr_time);
+   check(interest_rate.amount > 0, "Nothing to claim: 0 interest rate");
+
+   // Determine coin age
+   transfer_ins tr_table(_self, account.value);
+   auto index = tr_table.get_index<"symbol"_n>();
+
+   auto itr = index.require_find(sym_code.raw(), "Nothing to claim");
+   asset coin_age(0, sym);
+   asset balance(0, sym);
+   for ( ; itr != index.end() && itr->quantity.symbol == sym; itr++ ) {
+      uint32_t start_time = std::max(st.stake_start_time, itr->time);
+      uint32_t age = epoch_to_days(curr_time - start_time);
+      balance += itr->quantity;
+      if( age >= st.min_coin_age ) {
+         age = std::min(static_cast<uint32_t>(st.max_coin_age), age);
+         coin_age += itr->quantity * age;
+      }
+   }
+
+   // Calculate resulting reward
+   asset m = asset(static_cast<uint64_t>(std::pow(10, coin_age.symbol.precision())), sym);
+   asset reward = (coin_age.amount * interest_rate) / (365 * m).amount;
+
+   check(reward.amount > 0, "Nothing to claim");
+
+   // Issue new tokens
+   asset rem = st.max_supply - st.supply;
+   check(rem.amount > 0, "Max supply reached");
+   if( rem < reward )
+      reward = rem;
+
+   statstable.modify(st, same_payer, [&](currency_stats& st) {
+      st.supply += reward;
+   });
+
+   add_balance(account, reward, account);
+
+   // Update transferins
+   erase_transferins(index, sym);
+   tr_table.emplace(account, [&](transfer_in& tr) {
+      tr.id       = tr_table.available_primary_key();
+      tr.quantity = balance + reward;
+      tr.time     = curr_time;
+   });
+}
+
+asset postoken::get_interest_rate(const currency_stats& stats, uint32_t epoch_time) {
+   asset interest_rate(0, stats.max_supply.symbol);
+   uint32_t years_passed = epoch_to_days(epoch_time - stats.stake_start_time) / 365;
+   uint16_t y = 0;
+   for( const interest_t& rate : stats.anual_interests ) {
+      if( rate.years + y > years_passed || rate.years == 0 ) {
+         interest_rate = rate.interest_rate;
+         break;
+      }
+      y += rate.years;
+   }
+   return interest_rate;
 }
 
 void postoken::sub_balance( name owner, asset value, name ram_payer ) {
@@ -124,12 +192,7 @@ void postoken::sub_balance( name owner, asset value, name ram_payer ) {
    // Transaction exceeding tie limit can be a kind of a warning to the user that there might be a lot of stuff to claim
    transfer_ins transfers(_self, owner.value);
    auto index = transfers.get_index<"symbol"_n>();
-   // Returns lower bound - first matching
-   auto itr = index.require_find(sym_code.raw(), "No transfer ins found, even though balance exists!");
-   do {
-      check(itr->quantity.symbol == value.symbol, "Invalid precision in transferin!");
-      itr = index.erase(itr);
-   } while( itr != index.end() && itr->quantity.symbol.code() == sym_code );
+   erase_transferins(index, value.symbol);
 
    if( from.balance.amount > 0 ) {
       transfers.emplace(ram_payer, [&](transfer_in& tr) {
